@@ -32,11 +32,11 @@ let of_string s =
 
 (* Currently only supports hex, so size must be multiple of 4. *)
 let to_string bv =
-  let full = 
+  let full =
     (Printf.sprintf "%08X" (Int63.to_int_trunc bv.data.(0))) in
   "#x" ^ String.sub full ~pos:(max 0 ((String.length full) - 8)) ~len:8
 ;;
-      
+
 
 (* Precond: bv1.length == bv2.length *)
 let bvadd bv1 bv2 =
@@ -110,7 +110,7 @@ let bvmul bv1 bv2 =
   let one = create bv2.length in
   Bitarray.set one 0 true ;
   let ret = create bv1.length in
-  let rec helper res mult = 
+  let rec helper res mult =
     match compare mult zero with
     | 0 -> res
     | _ -> helper (bvadd res bv1) (bvsub mult one)
@@ -177,3 +177,9 @@ let bvsgt bv1 bv2 =
 let bvsge bv1 bv2 =
   bvsle bv2 bv1
 ;;
+
+let sexp_of_t t =
+  Bitarray.sexp_of_t t
+
+let t_of_sexp s =
+  Bitarray.t_of_sexp s

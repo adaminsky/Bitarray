@@ -42,3 +42,7 @@ val bvsle : t -> t -> bool
 val bvsgt : t -> t -> bool
 
 val bvsge : t -> t -> bool
+
+val sexp_of_t : t -> Ppx_sexp_conv_lib.Sexp.t
+
+val t_of_sexp : Ppx_sexp_conv_lib.Sexp.t -> t

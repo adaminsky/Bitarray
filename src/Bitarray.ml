@@ -43,7 +43,7 @@ let set t i v =
   let bucket = bucket i in
   t.data.(bucket) <- Int63_Ext.set t.data.(bucket) (index i) v
 
-let clear t = 
+let clear t =
   Array.fill t.data ~pos:0 ~len:(Array.length t.data) Int63_Ext.empty
 
 let fold =
