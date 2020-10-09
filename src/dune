@@ -1,0 +1,14 @@
+(library
+    (name Bitarray)
+    (modules Bitarray)
+    (public_name Bitarray)
+    (libraries core)
+    (synopsis "Simple fixed size bitarray library."))
+
+(library
+    (name BitarrayExt)
+    (modules BitarrayExt)
+    (public_name Bitarray.Ext)
+    (libraries core Bitarray)
+    (synopsis 
+        "Fixed size bitarrays with common operations like add and shift."))
