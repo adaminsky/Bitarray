@@ -6,3 +6,7 @@
     (wrapped false)
     (synopsis 
         "Fixed size bitarrays with common operations like add and shift."))
+(executable
+    (name profile)
+    (modules Profile)
+    (libraries BitarrayExt))
