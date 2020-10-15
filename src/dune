@@ -1,12 +1,12 @@
 (library
     (name BitarrayExt)
     (modules Bitarray BitarrayExt)
-    (public_name Bitarray)
-    (libraries core)
-    (wrapped false)
+    (public_name BitarrayExt)
+    (libraries core stdlib)
     (synopsis 
         "Fixed size bitarrays with common operations like add and shift."))
+
 (executable
     (name profile)
-    (modules Profile)
-    (libraries BitarrayExt))
+    (libraries BitarrayExt)
+    (modules Profile))

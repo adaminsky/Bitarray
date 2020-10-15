@@ -1,6 +1,10 @@
 type t = Bitarray.t
 
-val fold2 : t -> t -> init:'a -> f:('a -> bool -> bool -> 'a) -> 'a
+val create : int -> t
+
+val get : t -> int -> bool
+
+val set : t -> int -> bool -> unit
 
 (* A bitarray created from the string "#b00011" will be represented by
    the bitarray with index 0 set to true, index 1 to true, index 2 to

@@ -1,29 +1,15 @@
-open Core
-
-module Int63_Ext = struct
-  let empty = Int63.zero
-  let get t i = Int63.(Int63.bit_and t (Int63.shift_left Int63.one i) >
-                       Int63.zero)
-
-  let set t i v =
-    if v
-    then Int63.bit_or t (Int63.shift_left Int63.one i)
-    else Int63.bit_and t
-        (Int63.bit_xor Int63.minus_one (Int63.shift_left Int63.one i))
-end
-
 type t =
-  { data : Int63.t Array.t
+  { data : Int.t Array.t
   ; length : int
   }
 
 (* We can't use the sign bit, so we only get to use 62 bits *)
-let bits_per_bucket = 62
+let bits_per_bucket = 64
 
 let create sz =
-  if sz < 0 || sz > Array.max_length * bits_per_bucket
-  then invalid_argf "invalid size" ();
-  { data = Array.create ~len:(1 + (sz / bits_per_bucket)) Int63_Ext.empty
+  if sz < 0 || sz > Core.Array.max_length * bits_per_bucket
+  then Core.invalid_argf "invalid size" ();
+  { data = (Array.make (1 + (sz / bits_per_bucket)) Int.zero)
   ; length = sz
   }
 
@@ -32,19 +18,27 @@ let bucket i = i / bits_per_bucket
 let index i = i mod bits_per_bucket
 
 let bounds_check t i =
-  if i < 0 || i >= t.length then invalid_argf "Bitarray: out of bounds" ()
+  if i < 0 || i >= t.length then Core.invalid_argf "Bitarray: out of bounds" ()
 
 let get t i =
   bounds_check t i;
-  Int63_Ext.get t.data.(bucket i) (index i)
+  let n = bucket i in
+  let loc = index i in
+  Int.logand (Array.get t.data n) (Int.shift_left Int.one loc) > Int.zero
 
-let set t i v =
+let set t i (v: bool) =
   bounds_check t i;
-  let bucket = bucket i in
-  t.data.(bucket) <- Int63_Ext.set t.data.(bucket) (index i) v
+  let n = bucket i in
+  let loc = index i in
+  if v
+  then t.data.(n) <- (Int.logor (Array.get t.data n)
+                             (Int.shift_left Int.one loc))
+  else t.data.(n) <- Int.logand (Array.get t.data n) (Int.logxor Int.minus_one
+                                                        (Int.shift_left Int.one
+                                                           loc))
 
 let clear t =
-  Array.fill t.data ~pos:0 ~len:(Array.length t.data) Int63_Ext.empty
+  Array.fill t.data 0 (Array.length t.data) Int.zero
 
 let fold =
   let rec loop t n ~init ~f =
@@ -55,10 +49,10 @@ let fold =
 let iter t ~f = fold t ~init:() ~f:(fun _ v -> f v)
 
 let sexp_of_t t =
-  Array.sexp_of_t Bool.sexp_of_t (Array.init t.length ~f:(fun i -> get t i))
+  Core.Array.sexp_of_t Core.Bool.sexp_of_t (Core.Array.init t.length ~f:(fun i -> get t i))
 
 let t_of_sexp sexp =
-  let a = Array.t_of_sexp Bool.t_of_sexp sexp in
+  let a = Core.Array.t_of_sexp Core.Bool.t_of_sexp sexp in
   let t = create (Array.length a) in
-  Array.iteri a ~f:(fun i v -> set t i v);
+  Core.Array.iteri a ~f:(fun i v -> set t i v);
   t

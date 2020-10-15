@@ -1,15 +1,7 @@
 open Core
 
-module Int63_Ext : sig
-  val empty : Int63.t
-  val get : Int63.t -> int -> bool
-  val set : Int63.t -> int -> bool -> Int63.t
-end
-
-(* a single 63 bit chunk of the array, bounds checking is left to the main
- * module. We can only use 62 bits, because of the sign bit *)
 type t =
-  { data : Int63.t Array.t
+  { data : Int.t Array.t
   ; length : int
   }
 
