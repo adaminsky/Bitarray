@@ -34,22 +34,29 @@ let of_string (s: string) : t =
   | "#x" ->
     let bv = create (4 * (String.length numeral)) in
     let rec loop i s =
-      if i >= 0 then begin
-        bv.data.(i) <- (if i * 16 > (String.length s)
+      if i < Array.length bv.data then begin
+        bv.data.(i) <- (if i * 16 > (String.length numeral)
                         then
                           Int.zero
                         else
                           Int.of_string ("0x" ^ (String.suffix s 16)))
-        ; loop (i - 1) (String.drop_suffix s 16)
+        ; loop (i + 1) (String.drop_suffix s 16)
       end in
-    loop ((Array.length bv.data) - 1) numeral;
+    loop 0 numeral;
     bv
 
 (* Currently only supports hex, so size must be multiple of 4. *)
 let to_string (bv: t) : string =
-  let full =
-    (Printf.sprintf "%08X" bv.data.(0)) in
-  "#x" ^ String.suffix full 8
+  if bv.length % 4 = 0
+  then
+    let res, _ = Stdlib.Array.fold_left (fun (r, i) b -> 
+        let full =
+          (Printf.sprintf "%016X" b) in
+        ((String.suffix full ((bv.length/4) - (16*i))) ^ r), i+1)
+      ("", 0) bv.data in
+    "#x" ^ res
+  else
+    ""
 
 let intAdder (res: t) i c1 c2 carry_in =
   let sum = if carry_in
@@ -129,12 +136,19 @@ let bvshl (bv1: t) (bv2: t) : t =
   let one = create bv2.length in
   set one 0 true ;
   let ret = bvadd bv1 zero in
-  let rec helper res shift =
-    match compare shift zero with
-    | 0 -> res
-    | _ -> helper (bvmul ret (of_string "#x00000010")) (bvsub shift one)
-  in
-  helper ret bv2
+  let shift_amt = bv2.data.(0) in
+  let mask = Stdlib.Int.shift_right Stdlib.Int.min_int (shift_amt - 1) in
+  let rec helper i carry_in =
+    if i < Array.length bv1.data
+    then begin
+      let carry_out = Stdlib.Int.shift_right_logical
+                    (Stdlib.Int.logand mask bv1.data.(i))
+                    (64 - bv2.data.(0)) in
+      ret.data.(i) <- Stdlib.Int.logor
+          (Stdlib.Int.shift_left bv1.data.(i) shift_amt) carry_in;
+      helper (i+1) carry_out
+    end in
+  helper 0 0; ret
 
 let bvlshr (bv1: t) (bv2: t) : t =
   let zero = create bv2.length in
