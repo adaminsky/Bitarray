@@ -1,4 +1,5 @@
 # OCaml Bitarrays
+![Build Status](https://github.com/adaminsky/Bitarray/workflows/BitarrayExt%20build/badge.svg)
 
 A fixed size bitarray type implemented in OCaml using unboxed 63 bit integers.
 

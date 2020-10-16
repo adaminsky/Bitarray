@@ -15,4 +15,5 @@
         (alcotest :with-test)
         (ocaml
             (>= 4.02.3))
+        core
         dune))

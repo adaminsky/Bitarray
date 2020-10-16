@@ -1,0 +1,5 @@
+.merlin
+src/.merlin
+test/.merlin
+_build/
+_opam/
