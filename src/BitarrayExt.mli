@@ -14,6 +14,17 @@ val of_string : string -> t
 (* Currently only supports hex, so size must be multiple of 4. *)
 val to_string : t -> string
 
+val iter_carryi : (Int.t -> Int.t -> int -> Int.t)
+    -> Int.t Array.t
+    -> Int.t
+    -> unit
+
+val iter2_carryi : (Int.t -> Int.t -> Int.t -> int -> Int.t)
+    -> Int.t Array.t
+    -> Int.t Array.t
+    -> Int.t
+    -> unit
+
 (* Precond: bv1.length == bv2.length *)
 val bvadd : t -> t -> t
 

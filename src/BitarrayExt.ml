@@ -58,25 +58,37 @@ let to_string (bv: t) : string =
   else
     ""
 
-let intAdder (res: t) i c1 c2 carry_in =
-  let sum = if carry_in
-    then c1 + c2 + Stdlib.Int.one
-    else c1 + c2 in
-  (res.data.(i) <- sum);
-  not (Core.phys_equal ((Stdlib.Int.compare c1 0) = (Stdlib.Int.compare c2 0))
-         ((Stdlib.Int.compare sum 0) = (Stdlib.Int.compare c1 0)))
+(* This applies f to each element of arr while also propagating the output of f
+ * to the next call of f. *)
+let iter_carryi f arr carry_in =
+    let rec helper f_c arr i =
+        if i < Stdlib.Array.length arr
+        then
+            helper (f (f_c arr.(i) i)) arr (i+1) in
+    helper (f carry_in) arr 0
+
+let iter2_carryi f arr1 arr2 carry_in =
+    let rec helper f_c arr1 arr2 i =
+        if i < Stdlib.Array.length arr1
+        then
+            helper (f (f_c arr1.(i) arr2.(i) i)) arr1 arr2 (i+1) in
+    helper (f carry_in) arr1 arr2 0
 
 (* Precond: bv1.length == bv2.length *)
-let bvadd (bv1: t) (bv2: t) : t =
-  let () = assert(bv1.length = bv2.length) in
-  let sum = create (bv1.length) in
-  let n = Array.length bv1.data in
-  let rec loop i carry =
-      if i < n then
-        loop (i+1) (intAdder sum i (Array.get bv1.data i)
-                      (Array.get bv2.data i) carry) in
-  loop 0 false;
-  sum
+let bvadd (bv1: t) (bv2: t) =
+    let () = assert(bv1.length = bv2.length) in
+    let sum = create (bv1.length) in
+    let intAdder carry_in blk1 blk2 i =
+        sum.data.(i) <- blk1 + blk2 + carry_in;
+
+        if (blk1 < 0 && blk2 < 0 && sum.data.(i) > 0) ||
+        (blk1 > 0 && blk2 > 0 && sum.data.(i) < 0) then
+            1
+        else
+            0
+    in
+    iter2_carryi intAdder bv1.data bv2.data 0;
+    sum
 
 let bvnot (bv: t) : t =
   let bv_new = create bv.length in
