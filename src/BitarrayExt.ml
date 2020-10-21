@@ -1,4 +1,4 @@
-open Core
+open Base
 
 type t = Bitarray.t
 
@@ -48,27 +48,26 @@ let of_string (s: string) : t =
 
 (* Currently only supports hex, so size must be multiple of 4. *)
 let to_string (bv: t) : string =
-  if bv.length % 4 = 0
-  then
-    let res, _ = Stdlib.Array.fold_left (fun (r, i) b -> 
-        let full =
-          (Printf.sprintf "%015X" (Chunk.to_int b)) in
-        ((String.suffix full ((bv.length/4) - (15*i))) ^ r), i+1)
-      ("", 0) bv.data in
-    "#x" ^ res
-  else
-    ""
+    if bv.length % 4 = 0 then
+        let res = Array.foldi ~f:(fun i str chunk -> 
+            let full = (Printf.sprintf "%015X" (Chunk.to_int chunk)) in
+            (String.suffix full ((bv.length/4) - (15*i))) ^ str)
+        ~init:"" bv.data in
+        "#x" ^ res
+    else
+        ""
 
 (* Precond: bv1.length == bv2.length *)
 let bvadd (bv1: t) (bv2: t) =
     let () = assert(bv1.length = bv2.length) in
     let sum = create bv1.length in
-    Stdlib.Array.blit bv2.data 0 sum.data 0 (Array.length bv2.data);
-    let _ = Stdlib.Array.fold_left (fun (carry, i) x ->
+    let () = Array.blit ~src:bv2.data ~src_pos:0 ~dst:sum.data ~dst_pos:0
+                        ~len:(Array.length bv2.data) in
+    let _ = Array.foldi ~f:(fun i carry x ->
                         match Chunk.(add_bind (add x bv1.data.(i))
                                               (fun c -> add c carry)) with
-                        | s, ovf -> sum.data.(i) <- s; ovf, i+1)
-                    (Chunk.zero, 0)
+                        | s, ovf -> sum.data.(i) <- s; ovf)
+                    ~init:Chunk.zero
                     sum.data in
     sum
 
@@ -128,7 +127,7 @@ let bvmul (bv1: t) (bv2: t) : t =
 let bvshl (bv1: t) (bv2: t) : t =
   let ret = create bv2.length in
   let () = Array.blit ~src:bv1.data ~src_pos:0 ~dst:ret.data ~dst_pos:0
-            ~len:(Array.length bv1.data) in
+                      ~len:(Array.length bv1.data) in
   let shift_amt = Chunk.to_int bv2.data.(0) in
   let mask = Chunk.left_mask shift_amt in
   let rec helper i carry_in =

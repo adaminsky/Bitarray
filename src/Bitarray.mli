@@ -1,3 +1,5 @@
+open Base
+
 type t =
   { data : Chunk.t Array.t; length : int }
 
@@ -19,6 +21,6 @@ val fold : t -> init:'a -> f:('a -> bool -> 'a) -> 'a
 
 val iter : t -> f:(bool -> unit) -> unit
 
-val sexp_of_t : t -> Ppx_sexp_conv_lib.Sexp.t
+val sexp_of_t : t -> Exported_for_specific_uses.Ppx_sexp_conv_lib.Sexp.t
 
-val t_of_sexp : Ppx_sexp_conv_lib.Sexp.t -> t
+val t_of_sexp : Exported_for_specific_uses.Ppx_sexp_conv_lib.Sexp.t -> t

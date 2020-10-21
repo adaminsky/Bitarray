@@ -9,7 +9,7 @@ bug-reports: "https://github.com/adaminsky/Bitarray/issues"
 depends: [
   "alcotest" {with-test}
   "ocaml" {>= "4.02.3"}
-  "core"
+  "base"
   "dune" {>= "2.7"}
   "odoc" {with-doc}
 ]

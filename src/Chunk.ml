@@ -8,7 +8,7 @@ let bits_per_chunk = 60
 
 let bounds_check i =
     if i < 0 || i >= bits_per_chunk then
-        Core.invalid_argf "Chunk: out of bounds" ()
+        invalid_arg "Chunk: out of bounds"
 
 let get t i =
   bounds_check i;
@@ -19,12 +19,16 @@ let set t i (v: bool) =
   if v then Int63.(t lor (one lsl i)) else
       Int63.(t land (minus_one lxor (one lsl i)))
 
+let full_mask = Int63.(shift_right_logical minus_one 3)
+
+let ovf_mask = Int63.(lnot full_mask)
+
 (* Modulo 2^60 arithmetic. Returns a tuple containing overflow if any *)
 let add x y =
     let sum = Int63.(x + y) in
-    let ovf = Int63.((sum land ((of_int 3) lsl 60)) <> zero) in
-    if ovf then (Int63.(sum land minus_one), Int63.one) else
-        (Int63.(sum land minus_one), Int63.zero)
+    let ovf = Int63.((sum land ovf_mask) <> zero) in
+    let modulo = Int63.(sum land full_mask) in
+    if ovf then (modulo, Int63.one) else (modulo, Int63.zero)
 
 (* Used to apply a function to the output of add which then outputs a tuple of
  * the result with any carry. *)

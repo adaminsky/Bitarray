@@ -1,3 +1,5 @@
+open Base
+
 type t = Bitarray.t
 
 val create : int -> t
@@ -47,6 +49,6 @@ val bvsgt : t -> t -> bool
 
 val bvsge : t -> t -> bool
 
-val sexp_of_t : t -> Ppx_sexp_conv_lib.Sexp.t
+val sexp_of_t : t -> Exported_for_specific_uses.Ppx_sexp_conv_lib.Sexp.t
 
-val t_of_sexp : Ppx_sexp_conv_lib.Sexp.t -> t
+val t_of_sexp : Exported_for_specific_uses.Ppx_sexp_conv_lib.Sexp.t -> t

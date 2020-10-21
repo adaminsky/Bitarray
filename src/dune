@@ -2,7 +2,7 @@
     (name BitarrayExt)
     (modules Bitarray BitarrayExt Chunk)
     (public_name BitarrayExt)
-    (libraries core stdlib)
+    (libraries base)
     (synopsis 
         "Fixed size bitarrays with common operations like add and shift."))
 
