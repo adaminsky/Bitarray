@@ -1,9 +1,5 @@
-open Core
-
 type t =
-  { data : Int.t Array.t
-  ; length : int
-  }
+  { data : Chunk.t Array.t; length : int }
 
 val create : int -> t
 

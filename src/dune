@@ -1,6 +1,6 @@
 (library
     (name BitarrayExt)
-    (modules Bitarray BitarrayExt)
+    (modules Bitarray BitarrayExt Chunk)
     (public_name BitarrayExt)
     (libraries core stdlib)
     (synopsis 

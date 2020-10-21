@@ -22,12 +22,13 @@ let of_string (s: string) : t =
     let bv = create (String.length numeral) in
     let rec loop i s =
       if i >= 0 then begin
-        bv.data.(i) <- (if i * 64 > (String.length s)
+        bv.data.(i) <- (if i * Chunk.bits_per_chunk > (String.length s)
                         then
-                          Int.zero
+                          Chunk.zero
                         else
-                          Int.of_string ("0b" ^ (String.suffix s 64)))
-        ; loop (i - 1) (String.drop_suffix s 64)
+                          Chunk.of_string ("0b" ^ (String.suffix s
+                          Chunk.bits_per_chunk)))
+        ; loop (i - 1) (String.drop_suffix s Chunk.bits_per_chunk)
       end in
     loop ((Array.length bv.data) - 1) numeral;
     bv
@@ -35,12 +36,12 @@ let of_string (s: string) : t =
     let bv = create (4 * (String.length numeral)) in
     let rec loop i s =
       if i < Array.length bv.data then begin
-        bv.data.(i) <- (if i * 16 > (String.length numeral)
+        bv.data.(i) <- (if i * 15 > (String.length numeral)
                         then
-                          Int.zero
+                          Chunk.zero
                         else
-                          Int.of_string ("0x" ^ (String.suffix s 16)))
-        ; loop (i + 1) (String.drop_suffix s 16)
+                          Chunk.of_string ("0x" ^ (String.suffix s 15)))
+        ; loop (i + 1) (String.drop_suffix s 15)
       end in
     loop 0 numeral;
     bv
@@ -51,54 +52,35 @@ let to_string (bv: t) : string =
   then
     let res, _ = Stdlib.Array.fold_left (fun (r, i) b -> 
         let full =
-          (Printf.sprintf "%016X" b) in
-        ((String.suffix full ((bv.length/4) - (16*i))) ^ r), i+1)
+          (Printf.sprintf "%015X" (Chunk.to_int b)) in
+        ((String.suffix full ((bv.length/4) - (15*i))) ^ r), i+1)
       ("", 0) bv.data in
     "#x" ^ res
   else
     ""
 
-(* This applies f to each element of arr while also propagating the output of f
- * to the next call of f. *)
-let iter_carryi f arr carry_in =
-    let rec helper f_c arr i =
-        if i < Stdlib.Array.length arr
-        then
-            helper (f (f_c arr.(i) i)) arr (i+1) in
-    helper (f carry_in) arr 0
-
-let iter2_carryi f arr1 arr2 carry_in =
-    let rec helper f_c arr1 arr2 i =
-        if i < Stdlib.Array.length arr1
-        then
-            helper (f (f_c arr1.(i) arr2.(i) i)) arr1 arr2 (i+1) in
-    helper (f carry_in) arr1 arr2 0
-
 (* Precond: bv1.length == bv2.length *)
 let bvadd (bv1: t) (bv2: t) =
     let () = assert(bv1.length = bv2.length) in
-    let sum = create (bv1.length) in
-    let intAdder carry_in blk1 blk2 i =
-        sum.data.(i) <- blk1 + blk2 + carry_in;
-
-        if (blk1 < 0 && blk2 < 0 && sum.data.(i) > 0) ||
-        (blk1 > 0 && blk2 > 0 && sum.data.(i) < 0) then
-            1
-        else
-            0
-    in
-    iter2_carryi intAdder bv1.data bv2.data 0;
+    let sum = create bv1.length in
+    Stdlib.Array.blit bv2.data 0 sum.data 0 (Array.length bv2.data);
+    let _ = Stdlib.Array.fold_left (fun (carry, i) x ->
+                        match Chunk.(add_bind (add x bv1.data.(i))
+                                              (fun c -> add c carry)) with
+                        | s, ovf -> sum.data.(i) <- s; ovf, i+1)
+                    (Chunk.zero, 0)
+                    sum.data in
     sum
 
 let bvnot (bv: t) : t =
   let bv_new = create bv.length in
-  Array.iteri bv.data ~f:(fun i b -> bv_new.data.(i) <- (Stdlib.Int.lognot b));
+  Array.iteri bv.data ~f:(fun i b -> bv_new.data.(i) <- (Chunk.bit_not b));
   bv_new
 
 let compare (bv1: t) (bv2: t) : int =
   let rec helper (ind: int) (bv1: t) (bv2: t) =
     if ind >= 0 then
-      match [@warning "-8"] Stdlib.Int.compare bv1.data.(ind) bv2.data.(ind) with
+      match [@warning "-8"] Chunk.compare bv1.data.(ind) bv2.data.(ind) with
       | -1 -> -1
       | 0 -> helper (ind - 1) bv1 bv2
       | 1 -> 1
@@ -128,13 +110,13 @@ let bvugt (bv1: t) (bv2: t) : bool =
 
 let bvsub (bv1: t) (bv2: t) : t =
   let const_one = create bv2.length in
-  set const_one 0 true;
+  let () = set const_one 0 true in
   (bvadd bv1 (bvadd (bvnot bv2) const_one))
 
 let bvmul (bv1: t) (bv2: t) : t =
   let zero = create bv2.length in
   let one = create bv2.length in
-  set one 0 true ;
+  let () = set one 0 true in
   let ret = create bv1.length in
   let rec helper res mult =
     match compare mult zero with
@@ -144,28 +126,26 @@ let bvmul (bv1: t) (bv2: t) : t =
   helper ret bv2
 
 let bvshl (bv1: t) (bv2: t) : t =
-  let zero = create bv2.length in
-  let one = create bv2.length in
-  set one 0 true ;
-  let ret = bvadd bv1 zero in
-  let shift_amt = bv2.data.(0) in
-  let mask = Stdlib.Int.shift_right Stdlib.Int.min_int (shift_amt - 1) in
+  let ret = create bv2.length in
+  let () = Array.blit ~src:bv1.data ~src_pos:0 ~dst:ret.data ~dst_pos:0
+            ~len:(Array.length bv1.data) in
+  let shift_amt = Chunk.to_int bv2.data.(0) in
+  let mask = Chunk.left_mask shift_amt in
   let rec helper i carry_in =
-    if i < Array.length bv1.data
-    then begin
-      let carry_out = Stdlib.Int.shift_right_logical
-                    (Stdlib.Int.logand mask bv1.data.(i))
-                    (64 - bv2.data.(0)) in
-      ret.data.(i) <- Stdlib.Int.logor
-          (Stdlib.Int.shift_left bv1.data.(i) shift_amt) carry_in;
-      helper (i+1) carry_out
-    end in
-  helper 0 0; ret
+      if i < Array.length bv1.data then begin
+          let carry_out = Chunk.shift_right_logical
+                    (Chunk.bit_and mask bv1.data.(i)) 
+                    (Chunk.bits_per_chunk - shift_amt) in
+          let () = ret.data.(i) <- Chunk.bit_or
+          (Chunk.shift_left bv1.data.(i) shift_amt) carry_in in
+          helper (i+1) carry_out
+      end in
+  helper 0 Chunk.zero; ret
 
 let bvlshr (bv1: t) (bv2: t) : t =
   let zero = create bv2.length in
   let one = create bv2.length in
-  set one 0 true ;
+  let () = set one 0 true in
   let ret = bvadd bv1 zero in
   let rec helper res shift =
     match compare shift zero with
